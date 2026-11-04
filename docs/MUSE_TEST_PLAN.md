@@ -1,9 +1,32 @@
 # FKS MCP: test plan for Muse
 
 **What this is:** a guided test of the `fks` MCP server and the FKS edge ladder behind it.
-**Where:** oryx. The server is the `fks-mcp` package from [nuniesmith/fks-mcp](https://github.com/nuniesmith/fks-mcp), installed in the venv `~/.local/share/fks-mcp`. Claude Code runs it at user scope as `fks`, with the command `~/.local/share/fks-mcp/bin/fks-mcp`. The source checkout is `~/github/fks-mcp`, and this file is `docs/MUSE_TEST_PLAN.md` in it.
+**Where:** oryx. See *The install* below.
 **Before phase 0:** the `fks` tools only load when a session starts, so run this plan in a **new** Claude Code session on oryx.
 **How long:** about 20 minutes for phases 0–2. Phase 3 runs one real search, which takes a few minutes.
+
+---
+
+## The install (as of 2026-11-03)
+
+| What | Where |
+|---|---|
+| Source | [nuniesmith/fks-mcp](https://github.com/nuniesmith/fks-mcp). The repo is public, `v0.1.0` is tagged, and CI runs pytest on every push and PR. |
+| Package | `fks-mcp` 0.1.0, installed from `git+https://github.com/nuniesmith/fks-mcp@v0.1.0` into the venv `~/.local/share/fks-mcp` |
+| Command | `~/.local/share/fks-mcp/bin/fks-mcp` (stdio) |
+| Registration | Claude Code, user scope, named `fks`, in `~/.claude.json`. Its only env var is `FKS_TOKEN` (an operator `fks_pat_…`). `FKS_URL` defaults to `https://oryx.tailfef10.ts.net/api/v1`. |
+| This file | `docs/MUSE_TEST_PLAN.md` in the repo. On oryx it's `~/github/fks-mcp/docs/MUSE_TEST_PLAN.md`. |
+| Platform side | fks-web enforces the per-token search cap (`FKS_TOKEN_SEARCHES_PER_DAY`, default 5, counted only on accepted searches, reset when fks-web restarts) |
+
+The MCP used to live in fks-spawner as `tools/fks-mcp`, and `~/tools/fks-mcp` held a copy. Both are gone: fks-spawner #87 removed the folder. Ignore any old note that points there.
+
+**Updating:** run `~/.local/share/fks-mcp/bin/pip install -U git+https://github.com/nuniesmith/fks-mcp`, then start a new Claude Code session. Leave the `fks` entry in `~/.claude.json` alone. It is the user's, and it holds the token.
+
+**`~/github` is mirrored hourly** by `~/gh_sync.sh` (user timer `gh-sync.timer`, at :02). The mirror has three consequences:
+
+- The repo appears in `~/github/fks-mcp` on the next sync. Run `~/gh_sync.sh sync` to get it sooner.
+- Any folder in `~/github` that isn't a repo on GitHub **gets deleted**: the log says `PRUNE removing <name> (gone from GitHub)`. Never keep notes, test output or a new repo there. Put scratch work somewhere else.
+- The sync also **skips** a repo with uncommitted changes, so don't leave edits sitting in `~/github/fks-mcp`. Make changes on a branch and open a PR.
 
 ---
 
@@ -28,6 +51,7 @@ There are no tools for deleting, promoting, going live or handling keys. That is
 |---|---|---|
 | 0.1 | Run `claude mcp get fks` | `Status: ✔ Connected`, `Command: /home/jordan/.local/share/fks-mcp/bin/fks-mcp`, no args, and only `FKS_TOKEN` in the environment (don't print its value) |
 | 0.1b | Run `~/.local/share/fks-mcp/bin/pip show fks-mcp` | `Version: 0.1.0` |
+| 0.1c | Run `cat ~/.local/share/fks-mcp/lib/python3*/site-packages/fks_mcp-*.dist-info/direct_url.json` | `"url": "https://github.com/nuniesmith/fks-mcp"` with `"requested_revision": "v0.1.0"`, meaning it was installed from GitHub, not a local folder |
 | 0.2 | List your tools | Exactly 9: `ladder`, `hypothesis_get`, `experiment_get`, `datasets`, `alerts`, `create_edge`, `register_hypothesis`, `start_search`, `search_status` |
 | 0.3 | Read the server's instructions | They describe the process: edge → frozen hypothesis → search → verdict |
 
