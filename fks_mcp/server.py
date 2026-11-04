@@ -88,7 +88,9 @@ def build(fks: FKS | None = None) -> MCPServer:
         return run(lambda: api().start_search(hypothesis_id, family))
 
     @server.tool(description="A search's progress: its container state, the last log lines, and the "
-                             "experiment(s) it wrote (with verdicts) once finished.")
+                             "experiment(s) it wrote (with verdicts) once finished. The container (and so the log "
+                             "tail) is removed about 5 minutes after the search exits; then a note says where "
+                             "the results and the log are kept.")
     def search_status(hypothesis_id: int, log_lines: int = 40) -> str:
         return run(lambda: api().search_status(hypothesis_id, max(1, min(log_lines, 200))))
 

@@ -140,6 +140,13 @@ class FKS:
                                "status": container.get("status"), "experiments": exps}
         if container.get("id"):
             out["log_tail"] = self.logs(container["id"], log_lines)
+        elif inst is not None:
+            # The spawner prunes a stopped container (PRUNE_AFTER_SECS, 300 on
+            # oryx); the search's outputs and its log outlive it.
+            out["note"] = (f"the container is gone (the spawner removes stopped containers after about 5 "
+                           f"minutes). Results: /srv/fks-lake/jobs/{name}/<study>/ (verdict.json, trials.csv, "
+                           f"holdout.csv); log: Loki, kept 7 days, query {{container=\"fks-bot-{name}\"}} "
+                           f"in Grafana Explore.")
         return out
 
     def logs(self, container: str, tail: int = 40, wait_s: float = 4.0) -> list[str]:

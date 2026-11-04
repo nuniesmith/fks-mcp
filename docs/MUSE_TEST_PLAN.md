@@ -50,8 +50,8 @@ There are no tools for deleting, promoting, going live or handling keys. That is
 | # | Do | Expect |
 |---|---|---|
 | 0.1 | Run `claude mcp get fks` | `Status: ✔ Connected`, `Command: /home/jordan/.local/share/fks-mcp/bin/fks-mcp`, no args, and only `FKS_TOKEN` in the environment (don't print its value) |
-| 0.1b | Run `~/.local/share/fks-mcp/bin/pip show fks-mcp` | `Version: 0.1.0` |
-| 0.1c | Run `cat ~/.local/share/fks-mcp/lib/python3*/site-packages/fks_mcp-*.dist-info/direct_url.json` | `"url": "https://github.com/nuniesmith/fks-mcp"` with `"requested_revision": "v0.1.0"`, meaning it was installed from GitHub, not a local folder |
+| 0.1b | Run `~/.local/share/fks-mcp/bin/pip show fks-mcp` | `Version: 0.1.1` or later |
+| 0.1c | Run `cat ~/.local/share/fks-mcp/lib/python3*/site-packages/fks_mcp-*.dist-info/direct_url.json` | `"url": "https://github.com/nuniesmith/fks-mcp"` with `"requested_revision"` naming a tag, meaning it was installed from GitHub, not a local folder |
 | 0.2 | List your tools | Exactly 9: `ladder`, `hypothesis_get`, `experiment_get`, `datasets`, `alerts`, `create_edge`, `register_hypothesis`, `start_search`, `search_status` |
 | 0.3 | Read the server's instructions | They describe the process: edge → frozen hypothesis → search → verdict |
 
@@ -62,7 +62,7 @@ There are no tools for deleting, promoting, going live or handling keys. That is
 | 1.1 | `ladder` | At least 1 edge (`orb-cme`), hypothesis 1, experiment 1 with verdict `DO NOT PASTE`, and 0 deployments |
 | 1.2 | `hypothesis_get(1)` | The full frozen spec. The dataset is `raw/cme/databento+raw/cme/massive/cme 1m 2014-09-02..2024-09-06`, the symbols are MES/MNQ/MGC, and the costs include `contracts`/`account_usd`/`trail_usd` |
 | 1.3 | `experiment_get(1)` | `verdict_reasons` names U5, U7 and U9. There are 50 trials, the selection score is negative, and the holdout Sharpe is about 0.84 |
-| 1.4 | `search_status(1)` | Instance `edge-search-h1`, state `exited`, a `log_tail` of real log lines, and experiment 1 listed |
+| 1.4 | `search_status(1)` | Instance `edge-search-h1` and experiment 1 listed. The search finished long ago, so its container is gone: state `no container`, no `log_tail`, and a `note` naming the results folder and the Loki query. (The spawner removes a stopped container after about 5 minutes. The results in the lake stay, and Loki keeps the log 7 days.) |
 | 1.5 | `search_status(1, log_lines=500)` | Works: the server caps it at 200 |
 | 1.6 | `datasets` | Two `cme_futures` folders (the second one carries the sealed-holdout warning), any recorder folders under `recorded_by_instances`, and the dataset string format |
 | 1.7 | `alerts` | A JSON list (it may be empty). Note anything that is firing |
@@ -75,7 +75,8 @@ Each of these must come back as `FKS refused: …` in the platform's own words. 
 | # | Do | Expect |
 |---|---|---|
 | 2.1 | `create_edge(edge_id="mcp-bad", name="Bad", edge_type="janus", assets=[])` | Refused: `unknown edge_type 'janus' (supported: adaptive, rule)` |
-| 2.2 | `register_hypothesis` on `orb-cme` with `metric: "sharpe"`, `evidence: "because"`, `idea: "short"` | Refused, listing **several** errors at once (idea too short, metric, evidence) |
+| 2.2 | `register_hypothesis` on `orb-cme` with the **whole** phase 3.2 body, changing only `idea: "short"`, `metric: "sharpe"` and `evidence: "because"` | Refused, listing **several** errors at once (idea too short, metric, evidence) |
+| 2.2b | The same, but leave out `costs` | Refused with **one** error naming the missing field. The spawner parses the body strictly first: a missing field, a wrong type or an unknown field stops it before validation can list everything else |
 | 2.3 | `register_hypothesis` on an edge that doesn't exist (`no-such-edge`), with an otherwise valid body | Refused: the edge isn't known |
 | 2.4 | `start_search(9999)` | `FKS refused: no hypothesis 9999`. No instance is created |
 | 2.5 | Run `ladder` again | Same counts as in 1.1. Nothing landed |
@@ -125,6 +126,8 @@ Expect:
 
 **3.5** `experiment_get(<that id>)`. Report the verdict and the `verdict_reasons` word for word. **Most likely `DO NOT PASTE`**, because one grid point *is* the baseline and the grid is tiny. That is the expected and correct outcome.
 
+**3.4b** Wait 5+ minutes after it exits, then call `search_status(N)` again. Expect state `no container` and the `note`.
+
 **3.6** Call `start_search(N)` a second time. Expect a refusal, because the instance already exists. A search can't be silently re-run under the same name. It must not create a second experiment.
 
 **3.7** Run `ladder`. Expect hypothesis N with `searched: true`, and `trials_per_family` showing trend-band SOLUSDT with 4 trials.
@@ -154,3 +157,14 @@ Phase 3: run? (user OK'd: yes/no) — hypothesis N=…, experiment id=…, verdi
 Phase 4: findings
 Ladder before/after: edges a→b, hypotheses c→d, experiments e→f
 ```
+
+---
+
+## Runs
+
+**2026-11-04, Muse, v0.1.0: all phases pass.**
+- Phase 3 left these on the ladder: edge `mcp-smoke`, hypothesis 2 (`registered_by: nuniesmith`) and experiment 2. The verdict was DO NOT PASTE, failing U3, U4, U5, U6, U7, U8, U9 and U12. The grid's winner was the live baseline itself (lookback 200, band 0.05), and there were only 2 holdout trades. It finished in about 11 seconds on 2,252 SOL daily bars.
+- 3.6 was refused with HTTP 409 (`'edge-search-h2' already exists`), and no second experiment was created.
+- **Deviations, both resolved in v0.1.1:**
+  - 2.2 returned one parse error instead of a list of errors. The plan had been ambiguous about sending the whole body, so it now says to; 2.2b covers the parse-first behaviour.
+  - h1's container was gone. That is the spawner's 5-minute prune, so `search_status` now says where the results and the log are kept.
