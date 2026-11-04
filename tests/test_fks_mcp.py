@@ -38,6 +38,7 @@ class Fake:
             return httpx.Response(200, json={"instances": [
                 {"name": "edge-search-h1", "template": "job.edge-search", "data_dir": "/srv/fks-lake/jobs/edge-search-h1",
                  "container": {"id": "abc123", "state": "exited", "status": "Exited (0)"}},
+                {"name": "edge-search-h2", "template": "job.edge-search", "container": None},
                 {"name": "btc-recorder", "template": "job.recorder", "data_dir": "/srv/fks-lake/raw/kraken/btc", "params": {}}]})
         if p.endswith("/spawner/instances") and req.method == "POST":
             if body["params"]["hypothesis_id"] == 99:
@@ -125,3 +126,10 @@ def test_register_hypothesis_tool(fks, fake):
     server = build(fks)
     asyncio.run(server.call_tool("register_hypothesis", {"edge_id": "orb-cme", "hypothesis": {"idea": "x"}}))
     assert fake.calls[-1][1] == "/api/v1/spawner/edges/orb-cme/hypotheses"
+
+
+def test_search_status_after_the_container_is_pruned(fks):
+    s = fks.search_status(2)
+    assert s["exists"] and s["state"] == "no container"
+    assert "log_tail" not in s
+    assert "/srv/fks-lake/jobs/edge-search-h2/" in s["note"] and "Loki" in s["note"]
