@@ -12,7 +12,7 @@ personal access token.
 | `alerts` | open alerts |
 | `create_edge` | a new edge, status research |
 | `register_hypothesis` | a hypothesis, **frozen at registration** |
-| `start_search` | the `job.edge-search` instance `edge-search-h<id>` (family inferred: `raw/cme/…` → orb) |
+| `start_search` | the `job.edge-search` instance `edge-search-h<id>` (family inferred: `raw/cme/…` → orb; a perpetual folder joined with its venue's spot folder, `raw/kucoin/futures/…+raw/kucoin/spot/…` → carry; else trend-band. Pass `family` when unsure: a wrong one fails at load and spends the instance name) |
 | `search_status` | container state, the last log lines, the experiment once written |
 
 Nothing deletes, promotes a rung, arms live trading or touches a key: those
