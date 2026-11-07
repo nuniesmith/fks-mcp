@@ -73,6 +73,13 @@ def test_token_must_be_a_pat():
 def test_family_inferred_from_dataset():
     assert family_for("raw/cme/databento+raw/cme/massive/cme 1m 2014..2024") == "orb"
     assert family_for("raw/kraken/btc 1d") == "trend-band"
+    # carry: a perpetual folder joined with its venue's spot folder, perpetual first
+    assert family_for("raw/kucoin/futures/kucoin-perps+raw/kucoin/spot/kucoin-spot 1d 2020-04-01..2026-10-31") == "carry"
+    assert family_for("raw/binance/usdm/u+raw/binance/spot/s 1d 2020..2026") == "carry"
+    # not carry: one folder, the wrong order, or two venues
+    assert family_for("raw/kucoin/futures/kucoin-perps 1d 2020..2026") == "trend-band"
+    assert family_for("raw/kucoin/spot/s+raw/kucoin/futures/f 1d 2020..2026") == "trend-band"
+    assert family_for("raw/kucoin/futures/f+raw/binance/spot/s 1d 2020..2026") == "trend-band"
 
 
 def test_start_search_posts_the_instance(fks, fake):

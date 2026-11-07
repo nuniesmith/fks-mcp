@@ -82,8 +82,11 @@ def build(fks: FKS | None = None) -> MCPServer:
         return run(lambda: api().register_hypothesis(edge_id, hypothesis))
 
     @server.tool(description="Start the search for a hypothesis (one job, instance edge-search-h<id>). "
-                             "family is inferred from the dataset (raw/cme -> orb, else trend-band) unless "
-                             "given. It runs for minutes to hours; poll search_status.")
+                             "family is inferred from the dataset (raw/cme -> orb; a perpetual folder + "
+                             "its venue's spot folder, e.g. raw/kucoin/futures/x+raw/kucoin/spot/y -> "
+                             "carry; else trend-band) unless given. A wrong family fails at load and "
+                             "spends the instance name, so pass it when unsure. It runs for minutes to "
+                             "hours; poll search_status.")
     def start_search(hypothesis_id: int, family: str | None = None) -> str:
         return run(lambda: api().start_search(hypothesis_id, family))
 

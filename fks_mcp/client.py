@@ -185,10 +185,24 @@ class FKS:
         return self.get("/alerts/inbox")
 
 
+#: A carry dataset joins a perpetual folder and a spot folder on one venue,
+#: perpetual first (fks-spawner edge_search/dataset.py carry_folders).
+CARRY_PAIRS = (("raw/kucoin/futures/", "raw/kucoin/spot/"), ("raw/binance/usdm/", "raw/binance/spot/"))
+
+
 def family_for(dataset: str) -> str:
-    """The search family a dataset implies: CME futures are orb."""
+    """The search family a dataset implies: CME futures are orb; a perpetual
+    folder joined with its venue's spot folder is carry; anything else is
+    trend-band. A wrong guess is costly (the job fails at load and its
+    instance name, edge-search-h<id>, is spent), so pass `family` whenever
+    the dataset could be read more than one way."""
     folder = dataset.strip().split()[0] if dataset.strip() else ""
-    return "orb" if folder.startswith("raw/cme/") else "trend-band"
+    parts = folder.split("+")
+    if parts[0].startswith("raw/cme/"):
+        return "orb"
+    if len(parts) == 2 and any(parts[0].startswith(p) and parts[1].startswith(s) for p, s in CARRY_PAIRS):
+        return "carry"
+    return "trend-band"
 
 
 def _experiment_brief(e: dict) -> dict:
